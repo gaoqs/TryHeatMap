@@ -1,0 +1,243 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<title>responsive image</title>
+<style type="text/css">
+
+html, body{
+	height: 100%;
+	width: 100%;
+}
+
+.container {
+	height: 100%;
+	width: 100%;
+	padding:0;
+	margin:0;
+}
+
+.image-container {
+	margin: 5% auto;
+	width: 80%;
+	position: relative;
+}
+
+.image-container > img {
+	max-width: 100%;
+	height: auto;
+	position: absolute;
+	z-index: 0;
+}
+
+.image-container #mark{
+	width: 100%;
+	height: 100%;
+	background: #333;
+	opacity: 0.5;
+}
+
+#heatmapEl {
+	position: absolute;
+	z-index: 2;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+	<div class="image-container">
+		<img id="image" src="test.jpg" />
+		
+		<div id="heatmapEl">
+			<div id="mark"></div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript" src="heatmap.js"></script>
+<script>
+	
+	var app = (function(){
+		
+		//数据集
+		var dataSet = {
+				key1: { x:31, y:95, w:271, h:55, count: 5},
+				key2: { x:31, y:151, w:271, h:55, count: 5},
+				key3: { x:31, y:207, w:271, h:55, count: 5},
+				key4: { x:31, y:263, w:271, h:55, count: 5},
+				key5: { x:31, y:319, w:271, h:55, count: 5},
+				key6: { x:31, y:373, w:271, h:55, count: 5},
+				key7: { x:31, y:429, w:271, h:55, count: 5},
+				key8: { x:31, y:485, w:271, h:55, count: 5},
+				key9: { x:31, y:541, w:271, h:55, count: 5},
+				key10: { x:31, y:597, w:271, h:55, count: 5},
+				
+				key11: { x:336, y:95, w:541, h:415, count: 5},
+				
+				key12: { x:336, y:526, w:168, h:43, count: 5},
+				key13: { x:504, y:526, w:124, h:43, count: 5},
+				key14: { x:628, y:526, w:125, h:43, count: 5},
+				key15: { x:753, y:526, w:124, h:43, count: 5},
+				
+				key16: { x:336, y:570, w:84, h:42, count: 5},
+				key17: { x:336, y:612, w:84, h:42, count: 5},
+				key18: { x:421, y:570, w:84, h:42, count: 5},
+				key19: { x:421, y:612, w:84, h:42, count: 5},
+				
+				key20: { x:505, y:570, w:62, h:42, count: 5},
+				key21: { x:505, y:612, w:62, h:42, count: 5},
+				key22: { x:567, y:570, w:62, h:42, count: 5},
+				key23: { x:567, y:612, w:62, h:42, count: 5},
+				
+				key24: { x:629, y:570, w:62, h:42, count: 5},
+				key25: { x:629, y:612, w:62, h:42, count: 5},
+				key26: { x:691, y:570, w:62, h:42, count: 5},
+				key27: { x:691, y:612, w:62, h:42, count: 5},
+				
+				key28: { x:753, y:570, w:62, h:42, count: 5},
+				key29: { x:753, y:612, w:62, h:42, count: 5},
+				key30: { x:815, y:570, w:62, h:42, count: 5},
+				key31: { x:815, y:612, w:62, h:42, count: 5},
+				
+				key32: { x:336, y:674, w:541, h:27, count: 5},
+				
+				key33: { x:916, y:95, w:305, h:138, count: 5},
+				key34: { x:916, y:234, w:305, h:138, count: 5},
+				key35: { x:916, y:374, w:305, h:138, count: 5},
+				key36: { x:916, y:512, w:305, h:138, count: 5}
+			};
+	
+		/*
+		 * 绑定事件，一定时间内只执行一次
+		 */
+		function debounce(callback, delay, context){  
+			if (typeof(callback) !== "function") {  
+				return;  
+			}  
+			delay = delay || 150;  
+			context = context || null;  
+			var timeout;  
+			var runIt = function(){  
+					callback.apply(context);  
+				};  
+			return (function(){  
+				window.clearTimeout(timeout);  
+				timeout = window.setTimeout(runIt, delay);  
+			});  
+		}  
+		
+		return {
+			height: 0,
+			width: 0,
+			imageHeight: 720,
+			imageWidth: 1280,
+			percentage: 1,
+			radius: 25,
+			config: {
+				"debug":false, 
+				"radius": 0,
+				"element": "heatmapEl",
+				"visible": true,
+				"opacity": 50,
+				"gradient": { 0.45: "rgb(0,0,255)", 0.55: "rgb(0,255,255)", 0.65: "rgb(0,255,0)", 0.95: "yellow", 1.0: "rgb(255,0,0)" }
+			},
+		
+			resetSize: function() {
+				var ic = document.getElementById("image"),
+					cs = document.getElementById("heatmapEl");
+				
+				cs.style.height = ic.height + "px";
+				cs.style.width = ic.width + "px";
+				
+				this.height = ic.height;
+				this.width = ic.width;
+				this.percentage = this.width/this.imageWidth;
+			},
+			
+			init: function(){
+				this.resetSize();
+				this.draw();
+				window.onresize= debounce(this.reDraw, 10, this);
+			},
+			
+			reDraw: function(){
+				this.resetSize();
+				if(this.heatmap){
+					this.heatmap.cleanup();
+					this.heatmap = null;
+				}
+				
+				var _this = this;
+				var tt =  setTimeout(function() {
+					_this.draw();
+					clearTimeout(tt);
+				},5)
+			},
+			
+			draw: function(){
+				var list = [], point, x, y, w, h, offsetX = 0, offsetY = 0, max = 0, count = 0;
+				
+				var radius = this.config.radius = Math.round(this.radius*this.percentage);
+				this.heatmap = heatmapFactory.create(this.config);
+				
+				/*
+				 * 将每块看作是一个点添加到数据集，为块的中心为圆心画对应的圆
+				 * 这种展示效果不是很好
+				 */
+				/*for(var e in dataSet) {
+					point = dataSet[e];
+					x = Math.round((point.x + point.w/2)* this.percentage);
+					y = Math.round((point.y + point.h/2)* this.percentage);
+					
+					count = Math.round(Math.random()*100);
+					if(count>max){
+						max = count;
+					}
+					list.push({x:x, y:y, count:count});
+				}*/
+				
+				/*
+				 * 由于数据都是按照块给出的，单纯用一个点不能很好的展示块级的热力效果
+				 * 所以在一个块内分别沿着x轴和y轴按照某个固定的值将圆心平移增加一些模拟的点
+				 * 圆心(x+=radius-5, y+=radius-5)
+				 */
+				for(var e in dataSet) {
+					point = dataSet[e];
+					x = Math.round(point.x * this.percentage);
+					y = Math.round(point.y * this.percentage);
+					w = point.w * this.percentage;
+					h = point.h * this.percentage;
+					
+					offsetX = Math.round(w%radius/2);
+					offsetY = Math.round(h%radius/2);
+					
+					count = Math.round(Math.random()*2000);
+					if(count>max){
+						max = count;
+					}
+					
+					dataSet[e].count = count;
+					
+					for(var i=x+radius-offsetX; i<(x+w); i=i+radius-5){
+						for(var j=y+radius-offsetY; j<(y+h); j=j+radius-5){
+							list.push({x:i, y:j, count:count});
+						}
+					}
+				}
+				
+				this.heatmap.store.setDataSet({ max: max, data: list});
+			}
+		}
+	
+	})();
+	
+	window.onload = function(){
+		app.init();
+	};
+	
+</script>
+
+</body>
+</html>
